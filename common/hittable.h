@@ -8,6 +8,15 @@ public:
   point3 p;
   vec3 normal;
   double t;
+  bool front_face;
+
+  void set_face_normal(const ray& r, const vec3& outward_normal) {
+    // hit record의 법선벡터를 설정.
+    // "outward_normal"은 항상 단위 벡터라고 가정한다.
+
+    front_face = dot(r.direction(), outward_normal) < 0;
+    normal = front_face ? outward_normal : -outward_normal;
+  }
 };
 
 class hittable {
