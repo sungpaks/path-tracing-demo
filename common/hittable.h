@@ -3,10 +3,13 @@
 
 #include "ray.h"
 
+class material; // 컴파일러에게 "material class는 나중에 알려줄게요"
+
 class hit_record {
 public:
   point3 p;
   vec3 normal;
+  shared_ptr<material> mat;
   double t;
   bool front_face;
 
