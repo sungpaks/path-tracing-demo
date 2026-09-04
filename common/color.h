@@ -1,6 +1,7 @@
 #ifndef COLOR_H
 #define COLOR_H
 
+#include "interval.h"
 #include "vec3.h"
 
 #include <iostream>
@@ -13,9 +14,10 @@ void write_color(std::ostream& out, const color& pixel_color) {
   auto b = pixel_color.z();
 
   // [0,1] value를 [0, 255] 범위로
-  int rbyte = int(255.999 * r);
-  int gbyte = int(255.999 * g);
-  int bbyte = int(255.999 * b);
+  static const interval intensity(0.000, 0.999);
+  int rbyte = int(256 * intensity.clamp(r));
+  int gbyte = int(256 * intensity.clamp(g));
+  int bbyte = int(256 * intensity.clamp(b));
 
   // pixel color를 출력
   out << rbyte << ' ' << gbyte << ' ' << bbyte << '\n';

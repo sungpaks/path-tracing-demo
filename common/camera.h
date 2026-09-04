@@ -6,8 +6,9 @@
 class camera {
 public:
   // 카메라 파라미터 (public)
-  double aspect_ratio = 1.0; // (ideal) 종횡비 aspect ratio
-  int image_width = 100;     // 렌더링되는 이미지의 가로 픽셀 수
+  double aspect_ratio = 1.0;  // (ideal) 종횡비 aspect ratio
+  int image_width = 100;      // 렌더링되는 이미지의 가로 픽셀 수
+  int samples_per_pixel = 10; // 한 픽셀에 대해, 랜덤 샘플링하는 수
 
   void render(const hittable& world) {
     initialize();
@@ -17,12 +18,12 @@ public:
     for (int j = 0; j < image_height; j++) {
       std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
       for (int i = 0; i < image_width; i++) {
-        auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
-        auto ray_direction = pixel_center - center;
-        ray r(center, ray_direction);
-
-        color pixel_color = ray_color(r, world);
-        write_color(std::cout, pixel_color);
+        color pixel_color(0, 0, 0);
+        for (int sample = 0; sample < samples_per_pixel; sample++) {
+          ray r = get_ray(i, j);
+          pixel_color += ray_color(r, world);
+        }
+        write_color(std::cout, pixel_samples_scale * pixel_color);
       }
     }
 
@@ -31,15 +32,18 @@ public:
 
 private:
   // 카메라 내부 변수 (private)
-  int image_height;   // 렌더링된 이미지의 세로축 픽셀 수
-  point3 center;      // 카메라 중심
-  point3 pixel00_loc; // 좌상단(가장 처음) 픽셀의 위치
-  vec3 pixel_delta_u; // pixel 간 width축(u축) 거리
-  vec3 pixel_delta_v; // pixel 간 height축(v축) 거리
+  int image_height;           // 렌더링된 이미지의 세로축 픽셀 수
+  double pixel_samples_scale; // 색상 scale factor
+  point3 center;              // 카메라 중심
+  point3 pixel00_loc;         // 좌상단(가장 처음) 픽셀의 위치
+  vec3 pixel_delta_u;         // pixel 간 width축(u축) 거리
+  vec3 pixel_delta_v;         // pixel 간 height축(v축) 거리
 
   void initialize() {
     image_height = int(image_width / aspect_ratio);
     image_height = (image_height < 1) ? 1 : image_height;
+
+    pixel_samples_scale = 1.0 / samples_per_pixel;
 
     center = point3(0, 0, 0);
 
@@ -60,6 +64,23 @@ private:
     auto viewport_upper_left =
         center - vec3(0, 0, focal_length) - viewport_u / 2 - viewport_v / 2;
     pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+  }
+
+  ray get_ray(int i, int j) const {
+    // 어떤 위치 i, j에서, origin에서 랜덤 샘플된 지점으로 향하는 ray를 얻는다.
+    auto offset = sample_square();
+    auto pixel_sample =
+        pixel00_loc + ((i + offset.x()) * pixel_delta_u) + ((j + offset.y()) * pixel_delta_v);
+
+    auto ray_origin = center;
+    auto ray_direction = pixel_sample - ray_origin;
+
+    return ray(ray_origin, ray_direction);
+  }
+
+  vec3 sample_square() const {
+    // [-0.5, -0.5] ~ [0.5, 0.5] unit square에서의 랜덤 지점 뽑기
+    return vec3(random_double() - 0.5, random_double() - 0.5, 0);
   }
 
   color ray_color(const ray& r, const hittable& world) const {
