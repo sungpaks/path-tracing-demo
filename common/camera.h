@@ -7,11 +7,14 @@
 class camera {
 public:
   // 카메라 파라미터 (public)
-  double aspect_ratio = 1.0;  // (ideal) 종횡비 aspect ratio
-  int image_width = 100;      // 렌더링되는 이미지의 가로 픽셀 수
-  int samples_per_pixel = 10; // 한 픽셀에 대해, 랜덤 샘플링하는 수
-  int max_depth = 10;         // 최대 bounce 횟수
-  double vfov = 90;           // Vertical 시야각
+  double aspect_ratio = 1.0;    // (ideal) 종횡비 aspect ratio
+  int image_width = 100;        // 렌더링되는 이미지의 가로 픽셀 수
+  int samples_per_pixel = 10;   // 한 픽셀에 대해, 랜덤 샘플링하는 수
+  int max_depth = 10;           // 최대 bounce 횟수
+  double vfov = 90;             // Vertical 시야각
+  point3 EYE = point3(0, 0, 0); // EYE.
+  point3 AT = point3(0, 0, -1); // AT.
+  vec3 UP = vec3(0, 1, 0);      // UP.
 
   void render(const hittable& world) {
     initialize();
@@ -41,6 +44,7 @@ private:
   point3 pixel00_loc;         // 좌상단(가장 처음) 픽셀의 위치
   vec3 pixel_delta_u;         // pixel 간 width축(u축) 거리
   vec3 pixel_delta_v;         // pixel 간 height축(v축) 거리
+  vec3 u, v, n;               // 카메라 공간 기저
 
   void initialize() {
     image_height = int(image_width / aspect_ratio);
@@ -48,26 +52,30 @@ private:
 
     pixel_samples_scale = 1.0 / samples_per_pixel;
 
-    center = point3(0, 0, 0);
+    center = EYE;
 
     // Viewport의 Dimension
-    auto focal_length = 1.0;
+    auto focal_length = (EYE - AT).length();
     auto theta = degrees_to_radians(vfov);
     auto h = std::tan(theta / 2);
     auto viewport_height = 2 * h * focal_length;
     auto viewport_width = viewport_height * (double(image_width) / image_height);
 
+    // u,v,n 기저 계산
+    n = unit_vector(EYE - AT);
+    u = unit_vector(cross(UP, n));
+    v = cross(n, u);
+
     // Vu, Vv (Image Plane인 Viewport를 따라 좌상단부터 우측아래로 내려가는)
-    auto viewport_u = vec3(viewport_width, 0, 0);
-    auto viewport_v = vec3(0, -viewport_height, 0);
+    auto viewport_u = viewport_width * u;
+    auto viewport_v = viewport_height * -v;
 
     // u,v축을 따라 픽셀 간을 이동하는 델타 벡터
     pixel_delta_u = viewport_u / image_width;
     pixel_delta_v = viewport_v / image_height;
 
     // 좌상단 픽셀 위치 계산
-    auto viewport_upper_left =
-        center - vec3(0, 0, focal_length) - viewport_u / 2 - viewport_v / 2;
+    auto viewport_upper_left = center - (focal_length * n) - viewport_u / 2 - viewport_v / 2;
     pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
   }
 
