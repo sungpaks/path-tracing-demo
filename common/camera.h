@@ -11,6 +11,7 @@ public:
   int image_width = 100;      // 렌더링되는 이미지의 가로 픽셀 수
   int samples_per_pixel = 10; // 한 픽셀에 대해, 랜덤 샘플링하는 수
   int max_depth = 10;         // 최대 bounce 횟수
+  double vfov = 90;           // Vertical 시야각
 
   void render(const hittable& world) {
     initialize();
@@ -51,7 +52,9 @@ private:
 
     // Viewport의 Dimension
     auto focal_length = 1.0;
-    auto viewport_height = 2.0;
+    auto theta = degrees_to_radians(vfov);
+    auto h = std::tan(theta / 2);
+    auto viewport_height = 2 * h * focal_length;
     auto viewport_width = viewport_height * (double(image_width) / image_height);
 
     // Vu, Vv (Image Plane인 Viewport를 따라 좌상단부터 우측아래로 내려가는)

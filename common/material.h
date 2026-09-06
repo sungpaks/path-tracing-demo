@@ -53,6 +53,8 @@ private:
 
 class dielectric : public material {
 public:
+  dielectric(double refraction_index)
+      : refraction_index(refraction_index), absorption(color(0.0, 0.0, 0.0)) {}
   dielectric(double refraction_index, const color& absorption)
       : refraction_index(refraction_index), absorption(absorption) {}
 
