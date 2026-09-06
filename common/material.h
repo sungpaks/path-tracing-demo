@@ -53,11 +53,21 @@ private:
 
 class dielectric : public material {
 public:
-  dielectric(double refraction_index) : refraction_index(refraction_index) {}
+  dielectric(double refraction_index, const color& absorption)
+      : refraction_index(refraction_index), absorption(absorption) {}
 
   bool scatter(const ray& r_in, const hit_record& rec, color& attenuation,
                ray& scattered) const override {
-    attenuation = color(1.0, 1.0, 1.0); // 색상 그대로 통과
+    attenuation = color(1.0, 1.0, 1.0); // 기본적으로 손실 없음
+    if (!rec.front_face) {
+      // 빠져나가는 상황이라면, ray의 origin부터 p점까지의 거리만큼 흡수 적용 (Beer-Lambert)
+      const auto distance = (rec.p - r_in.origin()).length();
+
+      attenuation =
+          color(std::exp(-absorption.x() * distance), std::exp(-absorption.y() * distance),
+                std::exp(-absorption.z() * distance));
+    }
+
     double ri = // 들어갈 때는 eta/eta', 나올 때는 eta'/eta. eta'가 refraction_index
         rec.front_face ? (1.0 / refraction_index) : refraction_index;
 
@@ -79,6 +89,8 @@ public:
 private:
   double refraction_index;
   // Refraction Index 굴절률은 공기/진공 등 "바깥공간"에 대해 이 물질의 상대적인 값
+
+  color absorption; // 흡수율
 
   static double reflectance(double cosine, double refraction_index) {
     // Schlick's approximation을 통해 반사율을 구한다
