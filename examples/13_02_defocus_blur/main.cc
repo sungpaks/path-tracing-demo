@@ -26,10 +26,13 @@ int main() {
   cam.image_width = 400;
   cam.samples_per_pixel = 100;
   cam.max_depth = 10;
-  cam.vfov = 90;
+  cam.vfov = 40;
   cam.EYE = point3(-2, 2, 1);
   cam.AT = point3(0, 0, -1);
   cam.UP = vec3(0, 1, 0);
+
+  cam.defocus_angle = 10.0;
+  cam.focus_dist = 3.4;
 
   cam.render(world);
 }
