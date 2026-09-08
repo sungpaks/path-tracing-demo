@@ -34,3 +34,11 @@ foreach(EXAMPLE_SOURCE IN LISTS EXAMPLE_SOURCES)
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
   )
 endforeach()
+
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(algebra_test tests/algebra_test.cc tests/algebra_linkage_test.cc)
+  target_compile_features(algebra_test PRIVATE cxx_std_11)
+  target_include_directories(algebra_test PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/common")
+  add_test(NAME algebra COMMAND algebra_test)
+endif()
