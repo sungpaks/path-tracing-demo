@@ -10,8 +10,14 @@ public:
       : center(center), radius(std::fmax(0, radius)), mat(mat) {}
 
   bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
+    if (radius <= 0)
+      return false;
+
     vec3 oc = center - r.origin();
     auto a = r.direction().length_squared();
+    if (a == 0.0)
+      return false;
+
     auto h = dot(r.direction(), oc);
     auto c = oc.length_squared() - radius * radius;
 
