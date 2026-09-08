@@ -31,7 +31,8 @@
 // Modified from Don Cross's algebra.cpp:
 // https://github.com/cosinekitty/raytrace
 // Header-only subset, lowercase public API, sorted distinct real roots,
-// finite-input validation, and a guard for the cubic triple-root case.
+// finite-input validation, a guard for the cubic triple-root case,
+// and selection of a stable Ferrari branch to avoid a vanishing divisor.
 
 #ifndef ALGEBRA_H
 #define ALGEBRA_H
@@ -178,15 +179,35 @@ inline int SolveQuarticEquation(complex a, complex b, complex c, complex d, comp
     complex alpha3 = alpha * alpha2;
     complex P = -(alpha2 / 12.0 + gamma);
     complex Q = -alpha3 / 108.0 + alpha * gamma / 3.0 - beta * beta / 8.0;
-    complex R = -Q / 2.0 + sqrt(Q * Q / 4.0 + P * P * P / 27.0);
-    complex U = cbrt(R, 0);
-    complex y = (-5.0 / 6.0) * alpha + U;
-    if (IsZero(U)) {
-      y -= cbrt(Q, 0);
-    } else {
-      y -= P / (3.0 * U);
+    const complex radical = sqrt(Q * Q / 4.0 + P * P * P / 27.0);
+    const complex R_plus = -Q / 2.0 + radical;
+    const complex R_minus = -Q / 2.0 - radical;
+    // 뺄셈에 의한 상쇄를 줄이기 위해 절댓값이 큰 쪽을 선택한다.
+    const complex R = std::abs(R_plus) >= std::abs(R_minus) ? R_plus : R_minus;
+
+    complex y;
+    complex W;
+    double largest_W = -1;
+    // 첫 번째 세제곱근만 쓰면 W가 0으로 반올림될 수 있다.
+    // 세 가지 중 나눗셈의 분모 |W|가 가장 큰 가지를 선택한다.
+    for (int branch = 0; branch < 3; ++branch) {
+      const complex U = cbrt(R, branch);
+      complex candidate_y = (-5.0 / 6.0) * alpha;
+      if (U == complex(0.0, 0.0))
+        candidate_y -= cbrt(Q, branch);
+      else
+        candidate_y += U - P / (3.0 * U);
+
+      const complex candidate_W = sqrt(alpha + 2.0 * candidate_y);
+      const double magnitude = std::abs(candidate_W);
+      if (std::isfinite(magnitude) && magnitude > largest_W) {
+        largest_W = magnitude;
+        y = candidate_y;
+        W = candidate_W;
+      }
     }
-    complex W = sqrt(alpha + 2.0 * y);
+    if (!(largest_W > 0))
+      throw std::runtime_error("Quartic solver could not find a finite nonzero divisor");
 
     complex r1 = sqrt(-(3.0 * alpha + 2.0 * y + 2.0 * beta / W));
     complex r2 = sqrt(-(3.0 * alpha + 2.0 * y - 2.0 * beta / W));
