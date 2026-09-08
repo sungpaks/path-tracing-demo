@@ -5,6 +5,7 @@
 #include "material.h"
 #include "sphere.h"
 #include "cube.h"
+#include "cylinder.h"
 
 int main() {
   hittable_list world;
@@ -41,23 +42,32 @@ int main() {
     }
   }
 
-  auto material1 = make_shared<dielectric>(1.5);
-  world.add(make_shared<cube>(point3(0, 1, 0), vec3(1.0, 1.0, 1.5), material1));
+  // auto material1 = make_shared<dielectric>(1.5);
+  // world.add(make_shared<cube>(point3(0, 1, 0), vec3(1.0, 1.0, 1.5), material1));
 
-  auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
-  world.add(make_shared<cube>(point3(-4, 1, 2), vec3(0.8, 1.0, 1.2), material2));
+  // auto material2 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
+  // world.add(make_shared<cube>(point3(-4, 1, 2), vec3(0.8, 1.0, 1.2), material2));
 
-  auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
-  world.add(make_shared<cube>(point3(4, 1, 0), vec3(0.8, 1.5, 1.0), material3));
+  // auto material3 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
+  // world.add(make_shared<cube>(point3(4, 1, 0), vec3(0.8, 1.5, 1.0), material3));
+
+  auto material4 = make_shared<dielectric>(1.5, color(1.0, 0.5, 1.5));
+  world.add(make_shared<cylinder>(point3(0, 1, 0), 1.0, 2.0, material4));
+
+  auto material5 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
+  world.add(make_shared<cylinder>(point3(-4, 1, 0), 1.0, 1.0, material5));
+
+  auto material6 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
+  world.add(make_shared<cylinder>(point3(4, 1, 0), 1.0, 1.5, material6));
 
   camera cam;
 
   cam.aspect_ratio = 16.0 / 9.0;
-  cam.image_width = 600;
+  cam.image_width = 400;
   cam.samples_per_pixel = 50;
   cam.max_depth = 10;
   cam.vfov = 20;
-  cam.EYE = point3(13, 2, 3);
+  cam.EYE = point3(13, 4, 3);
   cam.AT = point3(0, 0, 0);
   cam.UP = vec3(0, 1, 0);
 

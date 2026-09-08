@@ -23,7 +23,7 @@ public:
   bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
     hit_record temp_rec;
     bool hit_anything = false;
-    auto closet_so_far = ray_t.max; // 지금까지 충돌한 것중 가장 먼 것
+    auto closet_so_far = ray_t.max; // 지금까지 충돌한 것중 가장 가까운 것 (ray의 t_max)
 
     for (const auto& object : objects) {
       if (object->hit(r, interval(ray_t.min, closet_so_far), temp_rec)) {
