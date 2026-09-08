@@ -6,6 +6,7 @@
 #include "sphere.h"
 #include "cube.h"
 #include "cylinder.h"
+#include "torus.h"
 
 int main() {
   hittable_list world;
@@ -52,13 +53,13 @@ int main() {
   // world.add(make_shared<cube>(point3(4, 1, 0), vec3(0.8, 1.5, 1.0), material3));
 
   auto material4 = make_shared<dielectric>(1.5, color(1.0, 0.5, 1.5));
-  world.add(make_shared<cylinder>(point3(0, 1, 0), 1.0, 2.0, material4));
+  world.add(make_shared<torus>(point3(0, 1, 0), 1.0, 0.25, material4));
 
   auto material5 = make_shared<lambertian>(color(0.4, 0.2, 0.1));
-  world.add(make_shared<cylinder>(point3(-4, 1, 0), 1.0, 1.0, material5));
+  world.add(make_shared<torus>(point3(-4, 1, 0), 1.0, 0.75, material5));
 
   auto material6 = make_shared<metal>(color(0.7, 0.6, 0.5), 0.0);
-  world.add(make_shared<cylinder>(point3(4, 1, 0), 1.0, 1.5, material6));
+  world.add(make_shared<torus>(point3(4, 1, 0), 1.0, 0.5, material6));
 
   camera cam;
 
