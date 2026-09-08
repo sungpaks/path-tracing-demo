@@ -45,3 +45,7 @@ C/C++ 파일은 저장할 때 자동으로 포맷됩니다. 프로젝트의 `.cl
 - LLDB: 디버거
 - ImageMagick: PPM 검사 및 PNG 변환
 - VS Code C/C++ + CMake Tools: 코드 완성, 오류 표시, 빌드 연동
+
+---
+
+![4 primitive x 3 material 비교](public/image.png)
