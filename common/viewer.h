@@ -9,6 +9,9 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 
 class viewer {
 public:
@@ -51,6 +54,10 @@ public:
 
     /** 여기서부터 메인 루프 */
     bool running = true;
+    using clock = std::chrono::steady_clock;
+
+    double total_render_ms = 0.0;
+    std::size_t measured_passes = 0;
 
     while (running) {
       SDL_Event event;
@@ -69,11 +76,21 @@ public:
 
       if (!running)
         break;
-      if (camera_changed)
+      if (camera_changed) {
         cam.reset_accumulation();
 
+        total_render_ms = 0.0;
+        measured_passes = 0;
+      }
+
       // 1. 전체 픽셀에 대해 샘플링 한 번 진행
+      const auto start = clock::now();
       cam.render_pass(world);
+      const auto end = clock::now();
+      const double render_ms = std::chrono::duration<double, std::milli>(end - start).count();
+      total_render_ms += render_ms;
+      ++measured_passes;
+      const double average_ms = total_render_ms / measured_passes;
 
       // 2. 현재까지의 평균을 표시용 texture에 기록
       update_texture(texture.get(), cam);
@@ -87,10 +104,20 @@ public:
       // 5. 준비된 화면을 window에 표시
       SDL_RenderPresent(renderer.get());
 
-      const std::string title =
-          "Progressive Path Tracing | " + std::to_string(cam.sample_count()) + " spp";
+      std::ostringstream title;
+      title << std::fixed << std::setprecision(2)
+            << "Path Tracing | " + std::to_string(cam.sample_count()) + " spp"
+            << " | Last: " << render_ms << " ms"
+            << " | Avg: " << average_ms << " ms/pass";
 
-      SDL_SetWindowTitle(window.get(), title.c_str());
+      SDL_SetWindowTitle(window.get(), title.str().c_str());
+
+      if (measured_passes % 50 == 0) {
+        std::clog << std::fixed << std::setprecision(2) << "[render] " << cam.image_width << 'x'
+                  << cam.height() << ", depth=" << cam.max_depth
+                  << ", passes=" << measured_passes << ", total=" << total_render_ms << " ms"
+                  << ", avg=" << average_ms << " ms/pass" << '\n';
+      }
     }
   }
 
