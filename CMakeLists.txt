@@ -35,6 +35,12 @@ foreach(EXAMPLE_SOURCE IN LISTS EXAMPLE_SOURCES)
   )
 endforeach()
 
+# Only the interactive viewer needs SDL; offline examples stay independent.
+if(TARGET progressive_viewer)
+  find_package(SDL2 REQUIRED CONFIG)
+  target_link_libraries(progressive_viewer PRIVATE SDL2::SDL2)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
   add_executable(transform_test tests/transform_test.cc)

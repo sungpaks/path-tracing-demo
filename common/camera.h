@@ -1,8 +1,11 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include "rtweekend.h"
 #include "hittable.h"
 #include "material.h"
+
+#include <vector>
 
 class camera {
 public:
@@ -18,6 +21,7 @@ public:
   double defocus_angle = 0;     // defocus blur를 위한 disk 크기 결정
   double focus_dist = 10;       // EYE에서 perfect focus plane까지의 거리
 
+  /** deprecated: (Bucket Rendering, Non-progressive) */
   void render(const hittable& world) {
     initialize();
 
@@ -38,10 +42,66 @@ public:
     std::clog << "\rDone.                 \n";
   }
 
+  int height() const { return image_height; }
+  int sample_count() const { return accumulated_samples; }
+
+  /** 누적 샘플 초기화 */
+  void reset_accumulation() {
+    initialize();
+
+    accumulated_colors.assign(static_cast<std::size_t>(image_width) * image_height,
+                              color(0, 0, 0));
+    accumulated_samples = 0;
+  }
+
+  /** 단일 샘플 패스 계산하기. 최초/카메라변경/해상도변경 시 reset_accumulation() 호출 필요 */
+  void render_pass(const hittable& world) {
+    for (int j = 0; j < image_height; ++j) {
+      for (int i = 0; i < image_width; ++i) {
+        const ray r = get_ray(i, j);
+        const std::size_t index = static_cast<std::size_t>(j) * image_width + i;
+
+        accumulated_colors[index] += ray_color(r, max_depth, world);
+      }
+    }
+    ++accumulated_samples;
+  }
+
+  /** 누적 샘플의 평균색상 반환. (감마보정X) */
+  color averaged_color(int i, int j) const {
+    if (accumulated_samples == 0)
+      return color(0, 0, 0);
+
+    const std::size_t index = static_cast<std::size_t>(j) * image_width + i;
+
+    return accumulated_colors[index] / accumulated_samples;
+  }
+
+  void render_progressive(const hittable& world) {
+    reset_accumulation();
+
+    for (int sample = 0; sample < samples_per_pixel; ++sample) {
+      render_pass(world);
+
+      std::clog << "\rSamples accumulated: " << sample_count() << " / " << samples_per_pixel
+                << ' ' << std::flush;
+    }
+
+    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+    for (int j = 0; j < image_height; ++j) {
+      for (int i = 0; i < image_width; ++i) {
+        write_color(std::cout, averaged_color(i, j));
+      }
+    }
+
+    std::clog << "\rDone.                              \n";
+  }
+
 private:
   // 카메라 내부 변수 (private)
-  int image_height;           // 렌더링된 이미지의 세로축 픽셀 수
-  double pixel_samples_scale; // 색상 scale factor
+  int image_height = 0;       // 렌더링된 이미지의 세로축 픽셀 수
+  double pixel_samples_scale; // deprecated: 레거시 Bucket Rendering용
   point3 center;              // 카메라 중심
   point3 pixel00_loc;         // 좌상단(가장 처음) 픽셀의 위치
   vec3 pixel_delta_u;         // pixel 간 width축(u축) 거리
@@ -49,6 +109,10 @@ private:
   vec3 u, v, n;               // 카메라 공간 기저
   vec3 defocus_disk_u;        // defocus disk의 수평 직경
   vec3 defocus_disk_v;        // defocus disk의 수직 직경
+
+  // 점진적 렌더링을 위한 누적변수
+  std::vector<color> accumulated_colors; /** (i,j)픽셀은 j*image_width+i에. 감마보정안됨 */
+  int accumulated_samples = 0;
 
   void initialize() {
     image_height = int(image_width / aspect_ratio);
