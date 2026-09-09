@@ -20,12 +20,16 @@ public:
     // 1. 월드 공간 광선을 오브젝트 공간으로
     const ray local_ray(r.origin() - center, r.direction());
 
-    // 2. 허용 범위 안의 가장 가까운 교차점 탐색
+    // 2. 바운딩 구와 검사 구간이 겹치지 않으면 조기종료
+    if (!_overlaps_bounding_sphere(local_ray, ray_t))
+      return false;
+
+    // 3. 정확한 토러스 교차 계산 => 허용 범위 안의 가장 가까운 교차점 탐색
     double hit_t;
     if (!_find_intersection(local_ray, ray_t, hit_t))
       return false;
 
-    // 3. 법선 계산 및 월드공간 기준 충돌 정보 저장
+    // 4. 법선 계산 및 월드공간 기준 충돌 정보 저장
     const point3 p = local_ray.at(hit_t);
     const double radial_distance = std::sqrt(p.x() * p.x() + p.z() * p.z()); // rho
     const point3 tube_center(major_radius * p.x() / radial_distance, 0,
@@ -46,6 +50,33 @@ private:
   double major_radius; /** 중심(회전축)에서 튜브 중심선까지 거리 R */
   double minor_radius; /** 튜브 자체의 반지름 r */
   shared_ptr<material> mat;
+
+  // 바운딩 구로 최적화하여 불필요한 4차식계산 최소화
+  bool _overlaps_bounding_sphere(const ray& local_ray, interval ray_t) const {
+    const vec3& o = local_ray.origin();
+    const vec3& d = local_ray.direction();
+
+    // 경계보다 구를 아주 약간 크게 잡는다 (오차에 의한 탈락 최소화)
+    const double torus_radius = major_radius + minor_radius;
+    const double padding = 1e-8 * std::fmax(1.0, torus_radius);
+    const double bound_radius = torus_radius + padding;
+
+    const double a = dot(d, d);
+    if (a == 0.0)
+      return false;
+    const double h = dot(o, d);
+    const double c = dot(o, o) - bound_radius * bound_radius;
+
+    const double discriminant = h * h - a * c;
+    if (discriminant < 0.0)
+      return false;
+
+    const double sqrtd = std::sqrt(discriminant);
+    const double t_enter = (-h - sqrtd) / a;
+    const double t_exit = (-h + sqrtd) / a;
+
+    return t_enter <= ray_t.max && t_exit >= ray_t.min;
+  }
 
   bool _find_intersection(const ray& local_ray, interval ray_t, double& hit_t) const {
     const vec3& o = local_ray.origin();
