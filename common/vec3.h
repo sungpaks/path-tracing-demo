@@ -1,6 +1,8 @@
 #ifndef VEC3_H
 #define VEC3_H
 
+#include "rt_utils.h"
+
 #include <cmath>
 #include <iostream>
 

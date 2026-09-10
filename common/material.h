@@ -2,15 +2,27 @@
 #define MATERIAL_H
 
 #include "hittable.h"
+#include "color.h"
 
 class material {
 public:
   virtual ~material() = default;
 
+  virtual color emitted(const hit_record&) const { return color(0, 0, 0); }
+
   virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation,
                        ray& scattered) const {
     return false;
   }
+};
+
+// Constant radiance emitter; scattering terminates at the light.
+class diffuse_light : public material {
+public:
+  explicit diffuse_light(const color& radiance) : radiance(radiance) {}
+  color emitted(const hit_record&) const override { return radiance; }
+private:
+  color radiance;
 };
 
 class lambertian : public material {

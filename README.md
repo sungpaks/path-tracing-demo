@@ -49,3 +49,33 @@ C/C++ 파일은 저장할 때 자동으로 포맷됩니다. 프로젝트의 `.cl
 ---
 
 ![4 primitive x 3 material 비교](public/image.png)
+
+
+## 실내 발광 씬
+
+`room_sphere`, `room_cube`, `room_cylinder`, `room_torus`는 같은 방에서
+왼쪽 유리·중앙 무광·오른쪽 금속 오브젝트를 비교합니다. 왼쪽 벽은 빨강, 오른쪽은 초록,
+정면 벽과 천장은 흰색, 바닥은 체크무늬입니다. 입구는 열려 있습니다.
+
+```sh
+make render-release EXAMPLE=room_sphere
+# 회전·비균일 스케일·위치 변화를 적용한 버전
+make render-release EXAMPLE=room_sphere_transformed
+# 저해상도 뷰어
+./build/release/bin/room_sphere --preview
+# 파일 출력 (기본 400×400, 1024 spp / preview 160×160, 256 spp)
+./build/release/bin/room_sphere --offline --preview > /tmp/room_sphere.ppm
+```
+
+WASD 이동, Q/E 상하 이동, 방향키 시선 회전, Esc 종료.
+씬 설정은 `common/room_scene.h`에 모았습니다.
+천장 패널은 `diffuse_light` 발광 재질이며 `ray_color()`는 방출광을 더합니다.
+이 씬은 하늘 배경을 끄고 실제 경로가 광원에 도달할 때 빛을 받습니다.
+광원 직접 샘플링/NEE와 디노이저는 아직 없으므로 특히 유리와 실내의 노이즈가
+천천히 수렴합니다. 기존 예제는 기본 하늘 배경을 유지합니다.
+
+`room_cube_transformed`, `room_cylinder_transformed`, `room_torus_transformed`도
+같은 방식으로 실행합니다. 변환 후 각 도형의 최저점을 계산해 바닥에 배치합니다.
+`make render-release`와 `make render`는 `room_*` 및 `progressive_viewer`에서
+파일 변환 없이 탐색 창을 엽니다. 다른 예제의 PPM/PNG 출력 동작은 유지합니다.
+방 씬의 파일 출력은 위 `--offline` 옵션을 사용하세요.

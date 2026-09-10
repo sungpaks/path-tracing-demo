@@ -16,6 +16,8 @@ public:
   int image_width = 100;        // 렌더링되는 이미지의 가로 픽셀 수
   int samples_per_pixel = 10;   // 한 픽셀에 대해, 랜덤 샘플링하는 수
   int max_depth = 10;           // 최대 bounce 횟수
+  bool use_sky_background = true;
+  color background = color(0, 0, 0);
   double vfov = 90;             // Vertical 시야각
   point3 EYE = point3(0, 0, 0); // EYE.
   point3 AT = point3(0, 0, -1); // AT.
@@ -196,12 +198,16 @@ private:
     hit_record rec;
 
     if (world.hit(r, interval(0.001, infinity), rec)) {
+      const color emission = rec.mat->emitted(rec);
       ray scattered;
       color attenuation;
       if (rec.mat->scatter(r, rec, attenuation, scattered))
-        return attenuation * ray_color(scattered, depth - 1, world);
-      return color(0, 0, 0);
+        return emission + attenuation * ray_color(scattered, depth - 1, world);
+      return emission;
     }
+
+    if (!use_sky_background)
+      return background;
 
     vec3 unit_direction = unit_vector(r.direction());
     auto a = 0.5 * (unit_direction.y() + 1.0);

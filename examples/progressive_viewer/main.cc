@@ -147,7 +147,7 @@ int main(int argc, char* argv[]) {
 
   camera cam;
   cam.aspect_ratio = 4.0 / 3.0;
-  cam.image_width = preview ? 320 : 800;
+  cam.image_width = preview ? 320 : 400;
   cam.samples_per_pixel = preview ? 24 : 150;
   cam.max_depth = 20;
   cam.vfov = 38;

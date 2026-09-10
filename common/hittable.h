@@ -2,6 +2,7 @@
 #define HITTABLE_H
 
 #include "ray.h"
+#include "interval.h"
 
 class material; // 컴파일러에게 "material class는 나중에 알려줄게요"
 
