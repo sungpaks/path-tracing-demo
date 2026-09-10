@@ -4,6 +4,8 @@ project(path_tracing LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(Threads REQUIRED)
+
 file(GLOB EXAMPLE_SOURCES CONFIGURE_DEPENDS
   "${CMAKE_CURRENT_SOURCE_DIR}/examples/*/main.cc"
 )
@@ -24,6 +26,7 @@ foreach(EXAMPLE_SOURCE IN LISTS EXAMPLE_SOURCES)
 
   add_executable("${EXAMPLE_NAME}" "${EXAMPLE_SOURCE}")
   target_compile_features("${EXAMPLE_NAME}" PRIVATE cxx_std_11)
+  target_link_libraries("${EXAMPLE_NAME}" PRIVATE Threads::Threads)
   target_include_directories("${EXAMPLE_NAME}" PRIVATE "${EXAMPLE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/common")
 
   if(CMAKE_CXX_COMPILER_ID MATCHES "AppleClang|Clang|GNU")

@@ -4,8 +4,10 @@
 #include "rtweekend.h"
 #include "hittable.h"
 #include "material.h"
+#include "thread_pool.h"
 
 #include <vector>
+#include <algorithm>
 
 class camera {
 public:
@@ -56,14 +58,30 @@ public:
 
   /** 단일 샘플 패스 계산하기. 최초/카메라변경/해상도변경 시 reset_accumulation() 호출 필요 */
   void render_pass(const hittable& world) {
-    for (int j = 0; j < image_height; ++j) {
-      for (int i = 0; i < image_width; ++i) {
-        const ray r = get_ray(i, j);
-        const std::size_t index = static_cast<std::size_t>(j) * image_width + i;
+    render_tile(world, 0, 0, image_width, image_height);
+    ++accumulated_samples;
+  }
 
-        accumulated_colors[index] += ray_color(r, max_depth, world);
-      }
-    }
+  /** 병렬로 샘플 패스 계산하기. */
+  void render_pass_parallel(const hittable& world, thread_pool& pool) {
+    const int tile_size = 16;
+    const int tiles_x = (image_width + tile_size - 1) / tile_size;
+    const int tiles_y = (image_height + tile_size - 1) / tile_size;
+    const std::size_t tile_count = static_cast<std::size_t>(tiles_x) * tiles_y;
+
+    pool.parallel_for(tile_count, [this, &world, tiles_x, tile_size](std::size_t tile_index) {
+      const int tile_x = static_cast<int>(tile_index % tiles_x);
+      const int tile_y = static_cast<int>(tile_index / tiles_x);
+
+      const int x_begin = tile_x * tile_size;
+      const int y_begin = tile_y * tile_size;
+
+      const int x_end = std::min(x_begin + tile_size, image_width);
+      const int y_end = std::min(y_begin + tile_size, image_height);
+
+      render_tile(world, x_begin, y_begin, x_end, y_end);
+    });
+
     ++accumulated_samples;
   }
 
@@ -188,6 +206,18 @@ private:
     vec3 unit_direction = unit_vector(r.direction());
     auto a = 0.5 * (unit_direction.y() + 1.0);
     return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+  }
+
+  // 기존 픽셀 루프를 떼어내서 "본인이 처리할 사각형 범위 내에서 실행"하기
+  void render_tile(const hittable& world, int x_begin, int y_begin, int x_end, int y_end) {
+    for (int j = y_begin; j < y_end; ++j) {
+      for (int i = x_begin; i < x_end; ++i) {
+        const ray r = get_ray(i, j);
+        const std::size_t index = static_cast<std::size_t>(j) * image_width + i;
+
+        accumulated_colors[index] += ray_color(r, max_depth, world);
+      }
+    }
   }
 };
 

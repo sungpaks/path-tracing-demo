@@ -3,6 +3,7 @@
 
 #include "camera.h"
 #include "quaternion.h"
+#include "thread_pool.h"
 
 #include <SDL.h>
 
@@ -53,6 +54,9 @@ public:
       throw std::runtime_error(SDL_GetError());
 
     /** 여기서부터 메인 루프 */
+    thread_pool pool(4);
+    std::clog << "Render workers: " << pool.size() << '\n';
+
     bool running = true;
     using clock = std::chrono::steady_clock;
 
@@ -85,7 +89,7 @@ public:
 
       // 1. 전체 픽셀에 대해 샘플링 한 번 진행
       const auto start = clock::now();
-      cam.render_pass(world);
+      cam.render_pass_parallel(world, pool);
       const auto end = clock::now();
       const double render_ms = std::chrono::duration<double, std::milli>(end - start).count();
       total_render_ms += render_ms;
