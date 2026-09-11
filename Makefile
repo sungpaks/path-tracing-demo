@@ -6,6 +6,7 @@ RELEASE_BINARY = build/release/bin/$(EXAMPLE)
 OUTPUT_DIR = output/$(EXAMPLE)
 PPM = $(OUTPUT_DIR)/image.ppm
 PNG = $(OUTPUT_DIR)/image.png
+ARGS ?=
 INTERACTIVE = $(filter progressive_viewer room_%,$(EXAMPLE))
 
 setup:
@@ -33,14 +34,14 @@ release:
 	cmake --build --preset release --target $(EXAMPLE)
 
 run: build
-	$(DEBUG_BINARY)
+	$(DEBUG_BINARY) $(ARGS)
 
 ifneq ($(INTERACTIVE),)
 render: build
-	$(DEBUG_BINARY)
+	$(DEBUG_BINARY) $(ARGS)
 
 render-release: release
-	$(RELEASE_BINARY)
+	$(RELEASE_BINARY) $(ARGS)
 
 preview: render
 else

@@ -8,6 +8,9 @@ class material {
 public:
   virtual ~material() = default;
 
+  // 직접광 샘플링을 지원하는 재질만 반사율을 제공한다.
+  virtual bool nee_albedo(const hit_record&, color&) const { return false; }
+
   virtual color emitted(const hit_record&) const { return color(0, 0, 0); }
 
   virtual bool scatter(const ray& r_in, const hit_record& rec, color& attenuation,
@@ -16,18 +19,29 @@ public:
   }
 };
 
-// Constant radiance emitter; scattering terminates at the light.
+// 일정한 방출광을 반환하고 산란을 종료한다.
 class diffuse_light : public material {
 public:
-  explicit diffuse_light(const color& radiance) : radiance(radiance) {}
-  color emitted(const hit_record&) const override { return radiance; }
+  explicit diffuse_light(const color& radiance, bool one_sided = false)
+      : radiance(radiance), one_sided(one_sided) {}
+  color emitted(const hit_record& rec) const override {
+    return one_sided && !rec.front_face ? color(0, 0, 0) : radiance;
+  }
+
 private:
   color radiance;
+  bool one_sided;
 };
 
 class lambertian : public material {
 public:
   lambertian(const color& albedo) : albedo(albedo) {}
+
+  // NEE에 필요한 반사율만 제공한다. 광원 계산은 렌더러가 맡는다.
+  bool nee_albedo(const hit_record&, color& result) const override {
+    result = albedo;
+    return true;
+  }
 
   bool scatter(const ray& r_in, const hit_record& rec, color& attenuation,
                ray& scattered) const override {

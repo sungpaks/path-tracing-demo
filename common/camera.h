@@ -4,6 +4,7 @@
 #include "rtweekend.h"
 #include "hittable.h"
 #include "material.h"
+#include "quad_light.h"
 #include "thread_pool.h"
 
 #include <vector>
@@ -12,10 +13,12 @@
 class camera {
 public:
   // 카메라 파라미터 (public)
-  double aspect_ratio = 1.0;    // (ideal) 종횡비 aspect ratio
-  int image_width = 100;        // 렌더링되는 이미지의 가로 픽셀 수
-  int samples_per_pixel = 10;   // 한 픽셀에 대해, 랜덤 샘플링하는 수
-  int max_depth = 10;           // 최대 bounce 횟수
+  double aspect_ratio = 1.0;  // (ideal) 종횡비 aspect ratio
+  int image_width = 100;      // 렌더링되는 이미지의 가로 픽셀 수
+  int samples_per_pixel = 10; // 한 픽셀에 대해, 랜덤 샘플링하는 수
+  int max_depth = 10;         // 최대 bounce 횟수
+  shared_ptr<quad_light> direct_light;
+  bool enable_nee = true;
   bool use_sky_background = true;
   color background = color(0, 0, 0);
   double vfov = 90;             // Vertical 시야각
@@ -192,18 +195,40 @@ private:
     return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
   }
 
-  color ray_color(const ray& r, int depth, const hittable& world) const {
+  color _surface_emission(const hit_record& rec, bool suppress_direct_emission) const {
+    // 이전 표면에서 NEE로 계산한 광원에 도달했다면 발광을 중복해서 더하지 않는다.
+    if (suppress_direct_emission && direct_light && direct_light->owns(rec))
+      return color(0, 0, 0);
+    return rec.mat->emitted(rec);
+  }
+
+  color ray_color(const ray& r, int depth, const hittable& world,
+                  bool suppress_direct_emission = false) const {
     if (depth <= 0)
       return color(0, 0, 0); // ray bounce limit 넘어가면 빛 없음으로 처리
     hit_record rec;
 
     if (world.hit(r, interval(0.001, infinity), rec)) {
-      const color emission = rec.mat->emitted(rec);
+      // 1. 지금 맞힌 표면 자체에서 나오는 빛 (이전에 NEE로 만났다면 무시)
+      const color emission = _surface_emission(rec, suppress_direct_emission);
+
+      // 2. NEE: 광원으로 직행하는 광선을 샘플링해보고 현재 표면에 들어오는 직접광을 계산
+      color albedo;
+      // 깊이가 1이면 기존 경로도 다음 광원에 도달하지 못한다.
+      const bool use_nee =
+          depth > 1 && enable_nee && direct_light && rec.mat->nee_albedo(rec, albedo);
+      const color direct =
+          use_nee ? direct_light->sample_direct(rec, albedo, world) : color(0, 0, 0);
+
+      // 3. 기존 scatter: 산란 광선을 따라 다음 표면에서 오는 빛을 재귀적으로 계산
+      // 이번에 NEE를 사용했다면 다음 충돌에서 해당 광원의 발광을 중복 계산하지 않는다.
       ray scattered;
       color attenuation;
+      color scattered_light(0, 0, 0);
       if (rec.mat->scatter(r, rec, attenuation, scattered))
-        return emission + attenuation * ray_color(scattered, depth - 1, world);
-      return emission;
+        scattered_light = attenuation * ray_color(scattered, depth - 1, world, use_nee);
+
+      return emission + direct + scattered_light;
     }
 
     if (!use_sky_background)
